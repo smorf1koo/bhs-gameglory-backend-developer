@@ -1,0 +1,69 @@
+slug,name,category,games_count
+roguelike,Roguelike,mechanic,129
+roguelite,Roguelite,mechanic,171
+procedural-generation,Procedural Generation,mechanic,298
+permadeath,Permadeath,mechanic,177
+deckbuilding,Deckbuilding,mechanic,99
+card-game,Card Game,mechanic,105
+turn-based,Turn-Based,mechanic,215
+tactics,Tactics,mechanic,68
+strategy,Strategy,genre,281
+4x,4X,genre,52
+rts,RTS,genre,59
+crafting,Crafting,mechanic,264
+survival,Survival,genre,172
+base-building,Base Building,mechanic,290
+open-world,Open World,mechanic,224
+exploration,Exploration,mechanic,249
+sandbox,Sandbox,mechanic,133
+metroidvania,Metroidvania,genre,98
+platformer,Platformer,genre,181
+puzzle,Puzzle,genre,240
+physics,Physics,mechanic,196
+stealth,Stealth,mechanic,46
+hack-and-slash,Hack and Slash,mechanic,129
+bullet-hell,Bullet Hell,mechanic,72
+fps,FPS,genre,78
+souls-like,Souls-like,genre,93
+resource-management,Resource Management,mechanic,254
+city-builder,City Builder,genre,77
+colony-sim,Colony Sim,genre,52
+management,Management,genre,165
+automation,Automation,mechanic,48
+farming,Farming,mechanic,89
+visual-novel,Visual Novel,genre,80
+choices-matter,Choices Matter,mechanic,119
+story-rich,Story Rich,mechanic,340
+rhythm,Rhythm,genre,39
+racing,Racing,genre,50
+sports,Sports,genre,47
+fighting,Fighting,genre,35
+idle,Idle,genre,43
+rpg,RPG,genre,183
+simulation,Simulation,genre,184
+point-and-click,Point & Click,mechanic,41
+mystery,Mystery,theme,169
+singleplayer,Singleplayer,mode,493
+multiplayer,Multiplayer,mode,457
+co-op,Co-op,mode,233
+online-pvp,Online PvP,mode,154
+local-multiplayer,Local Multiplayer,mode,160
+fantasy,Fantasy,theme,275
+sci-fi,Sci-fi,theme,360
+space,Space,theme,132
+horror,Horror,theme,165
+cyberpunk,Cyberpunk,theme,43
+medieval,Medieval,theme,101
+anime,Anime,theme,135
+pixel-graphics,Pixel Graphics,style,194
+hand-drawn,Hand-drawn,style,133
+2d,2D,style,446
+3d,3D,style,326
+first-person,First-Person,style,240
+atmospheric,Atmospheric,mood,283
+relaxing,Relaxing,mood,235
+difficult,Difficult,mood,333
+cute,Cute,mood,226
+minimalist,Minimalist,style,149
+early-access,Early Access,business,193
+free-to-play,Free to Play,business,152

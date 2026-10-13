@@ -1,0 +1,371 @@
+openapi: 3.1.0
+info:
+  title: Gameglory Catalog API (test task contract)
+  version: 1.0.0
+  description: |
+    Единый контракт API каталога игр для тестовых заданий Gameglory
+    (Backend Developer реализует его, Frontend Developer потребляет его через mock-API).
+
+    Данные — СИНТЕТИЧЕСКИЕ (см. shared-data/README.md). Все названия игр и студий выдуманы.
+
+    Общие правила:
+    * Все ответы — `application/json; charset=utf-8`.
+    * Ошибка «не найдено» — `404` с телом `{"detail": "<текст>"}`.
+    * Невалидные параметры — `422` (формат тела как у FastAPI: `{"detail": [...]}`, допускается и строка).
+    * Детерминированность: при равенстве ключа сортировки порядок определяется по `id` по возрастанию.
+    * Деньги — USD, число с двумя знаками после запятой. Даты — ISO 8601 (`YYYY-MM-DD`).
+    * Числовые параметры ограничены сверху (см. `maximum`): значение вне диапазона — `422`, а не `500`.
+servers:
+  - url: http://localhost:8000
+    description: Backend
+  - url: http://localhost:3001
+    description: Mock API
+tags:
+  - name: games
+  - name: niches
+  - name: meta
+paths:
+  /health:
+    get:
+      tags: [meta]
+      operationId: health
+      summary: Проверка живости сервиса
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    type: string
+                    enum: [ok]
+  /tags:
+    get:
+      tags: [meta]
+      operationId: listTags
+      summary: Словарь тегов с числом игр
+      description: Все теги словаря (включая теги без игр). Сортировка — `games_count` по убыванию, затем `slug` по возрастанию.
+      responses:
+        "200":
+          description: Список тегов
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Tag"
+  /games:
+    get:
+      tags: [games]
+      operationId: searchGames
+      summary: Поиск игр с фильтрами, сортировкой и пагинацией
+      description: |
+        Все фильтры объединяются через логическое И.
+        `total` — число игр, удовлетворяющих фильтрам (без учёта пагинации).
+        Страница за пределами диапазона возвращает пустой `items` и корректный `total`.
+      parameters:
+        - name: q
+          in: query
+          description: |
+            Подстрока названия, без учёта регистра. Пробелы по краям отбрасываются;
+            если после этого строка пустая (`q=` или `q=%20%20`) — `422`.
+          schema: {type: string, minLength: 1, maxLength: 100}
+        - name: tags
+          in: query
+          description: |
+            Слаги тегов через запятую (`roguelike,deckbuilding`). Игра должна иметь ВСЕ перечисленные теги.
+            Неизвестный слаг не является ошибкой: результат будет пустым.
+          schema: {type: string, example: "roguelike,deckbuilding"}
+        - name: genre
+          in: query
+          description: Точное название жанра (`Strategy`). Игра должна содержать этот жанр.
+          schema: {type: string}
+        - name: platform
+          in: query
+          schema:
+            type: string
+            enum: [windows, mac, linux]
+        - name: price_min
+          in: query
+          description: Минимальная цена, включительно. `inf` и `nan` → 422.
+          schema: {type: number, minimum: 0, maximum: 10000}
+        - name: price_max
+          in: query
+          description: Максимальная цена, включительно. `price_min > price_max` → 422.
+          schema: {type: number, minimum: 0, maximum: 10000}
+        - name: year_from
+          in: query
+          description: Год релиза от, включительно.
+          schema: {type: integer, minimum: 1970, maximum: 2100}
+        - name: year_to
+          in: query
+          description: Год релиза до, включительно. `year_from > year_to` → 422.
+          schema: {type: integer, minimum: 1970, maximum: 2100}
+        - name: sort
+          in: query
+          description: |
+            Поле сортировки; префикс `-` — по убыванию. Вторичный ключ всегда `id` по возрастанию.
+            `title` сравнивается без учёта регистра, посимвольно (как `lower(title)`).
+            Для `reviews_positive_ratio` значения `null` всегда идут в конце.
+          schema:
+            type: string
+            default: -reviews_total
+            enum:
+              - title
+              - -title
+              - release_date
+              - -release_date
+              - price_usd
+              - -price_usd
+              - reviews_total
+              - -reviews_total
+              - reviews_positive_ratio
+              - -reviews_positive_ratio
+        - name: page
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 10000, default: 1}
+        - name: page_size
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 100, default: 20}
+      responses:
+        "200":
+          description: Страница результатов
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GamePage"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /games/{id}:
+    get:
+      tags: [games]
+      operationId: getGame
+      summary: Карточка игры
+      parameters:
+        - $ref: "#/components/parameters/GameId"
+      responses:
+        "200":
+          description: Игра
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GameDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /games/{id}/similar:
+    get:
+      tags: [games]
+      operationId: getSimilarGames
+      summary: Похожие игры по коэффициенту Жаккара множеств тегов
+      description: |
+        `score = |T(a) ∩ T(b)| / |T(a) ∪ T(b)|`, округление до 4 знаков.
+        Сама игра в выдачу не входит; игры с `score = 0` не возвращаются.
+        Порядок: `score` по убыванию, затем `reviews_total` по убыванию, затем `id` по возрастанию.
+      parameters:
+        - $ref: "#/components/parameters/GameId"
+        - name: limit
+          in: query
+          schema: {type: integer, minimum: 1, maximum: 50, default: 10}
+      responses:
+        "200":
+          description: Похожие игры
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SimilarGames"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /niches/{tag}/stats:
+    get:
+      tags: [niches]
+      operationId: getNicheStats
+      summary: Агрегаты по нише (тегу)
+      description: |
+        Ниша — все игры, у которых есть тег `{tag}`. Неизвестный тег (нет в словаре `/tags`) → 404.
+        * `median_price_usd` — медиана цены по всем играм ниши (бесплатные включены как 0), 2 знака.
+        * `median_reviews_total` — медиана `reviews_total` (при чётном числе — среднее двух центральных).
+        * `mean_positive_ratio` — среднее `reviews_positive_ratio` по играм, где оно не `null`, 3 знака; `null`, если таких нет.
+        * `releases_by_year` — КАЖДЫЙ год от минимального до максимального года релиза в нише (по возрастанию), годы без релизов — с `count = 0`.
+        * `price_distribution` — ровно 6 корзин в фиксированном порядке:
+          `free` (=0), `0-5` (0<p<5), `5-10` (5≤p<10), `10-20` (10≤p<20), `20-30` (20≤p<30), `30+` (p≥30); пустые корзины с `count = 0`.
+      parameters:
+        - name: tag
+          in: path
+          required: true
+          schema: {type: string, example: roguelike}
+      responses:
+        "200":
+          description: Статистика ниши
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NicheStats"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  parameters:
+    GameId:
+      name: id
+      in: path
+      required: true
+      description: Целое от 1 до 2147483647; `0`, отрицательное или большее число → 422, несуществующая игра → 404.
+      schema: {type: integer, minimum: 1, maximum: 2147483647}
+  responses:
+    NotFound:
+      description: Объект не найден
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ValidationError:
+      description: Невалидные параметры запроса
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ValidationErrorBody"
+  schemas:
+    Error:
+      type: object
+      required: [detail]
+      properties:
+        detail: {type: string}
+    ValidationErrorBody:
+      type: object
+      required: [detail]
+      properties:
+        detail:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: object
+                properties:
+                  loc:
+                    type: array
+                    items:
+                      oneOf: [{type: string}, {type: integer}]
+                  msg: {type: string}
+                  type: {type: string}
+    Tag:
+      type: object
+      required: [slug, name, category, games_count]
+      properties:
+        slug: {type: string, example: procedural-generation}
+        name: {type: string, example: Procedural Generation}
+        category:
+          type: string
+          enum: [genre, mechanic, theme, mode, style, mood, business]
+        games_count: {type: integer, minimum: 0}
+    GameSummary:
+      type: object
+      required: [id, title, developer, publisher, release_date, price_usd, tags, genres,
+                 reviews_total, reviews_positive_ratio, platforms]
+      properties:
+        id: {type: integer, example: 100950}
+        title: {type: string}
+        developer: {type: string}
+        publisher: {type: string}
+        release_date: {type: string, format: date}
+        price_usd: {type: number, minimum: 0, example: 14.99}
+        tags:
+          type: array
+          items: {type: string}
+          minItems: 1
+        genres:
+          type: array
+          items: {type: string}
+        reviews_total: {type: integer, minimum: 0}
+        reviews_positive_ratio:
+          type: [number, "null"]
+          minimum: 0
+          maximum: 1
+          description: Доля положительных отзывов; `null`, если отзывов нет.
+        platforms:
+          type: array
+          items:
+            type: string
+            enum: [windows, mac, linux]
+    GameDetail:
+      allOf:
+        - $ref: "#/components/schemas/GameSummary"
+        - type: object
+          required: [short_description, estimated_owners_range]
+          properties:
+            short_description: {type: string}
+            estimated_owners_range: {type: string, example: "20,000 .. 50,000"}
+    GamePage:
+      type: object
+      required: [items, total, page, page_size]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/GameSummary"
+        total: {type: integer, minimum: 0}
+        page: {type: integer, minimum: 1}
+        page_size: {type: integer, minimum: 1, maximum: 100}
+    SimilarItem:
+      type: object
+      required: [game, score, shared_tags]
+      properties:
+        game:
+          $ref: "#/components/schemas/GameSummary"
+        score: {type: number, exclusiveMinimum: 0, maximum: 1}
+        shared_tags:
+          type: array
+          description: Общие теги, отсортированы по алфавиту.
+          items: {type: string}
+    SimilarGames:
+      type: object
+      required: [game_id, items]
+      properties:
+        game_id: {type: integer}
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SimilarItem"
+    YearCount:
+      type: object
+      required: [year, count]
+      properties:
+        year: {type: integer}
+        count: {type: integer, minimum: 0}
+    PriceBucket:
+      type: object
+      required: [bucket, count]
+      properties:
+        bucket:
+          type: string
+          enum: [free, 0-5, 5-10, 10-20, 20-30, 30+]
+        count: {type: integer, minimum: 0}
+    NicheStats:
+      type: object
+      required: [tag, games_count, median_price_usd, median_reviews_total, mean_positive_ratio,
+                 releases_by_year, price_distribution]
+      properties:
+        tag: {type: string}
+        games_count: {type: integer, minimum: 0}
+        median_price_usd: {type: [number, "null"]}
+        median_reviews_total: {type: [number, "null"]}
+        mean_positive_ratio: {type: [number, "null"]}
+        releases_by_year:
+          type: array
+          items:
+            $ref: "#/components/schemas/YearCount"
+        price_distribution:
+          type: array
+          minItems: 6
+          maxItems: 6
+          items:
+            $ref: "#/components/schemas/PriceBucket"

@@ -1,0 +1,17 @@
+{
+  "dataset": "Gameglory synthetic game market dataset",
+  "synthetic": true,
+  "disclaimer": "SYNTHETIC DATA. All titles, studios, publishers, numbers and reviews are generated and do not describe real products. Not affiliated with Steam/Valve or SteamSpy.",
+  "generator": "BHS synthetic market generator",
+  "seed": 20261009,
+  "data_cutoff": "2026-09-30",
+  "counts": {
+    "games": 2000,
+    "tags": 68,
+    "reviewed_games": 60,
+    "reviews": 8883,
+    "ground_truth_topic_labels": 11303
+  },
+  "list_separator_in_csv": "|",
+  "license": "CC0 for recruitment/test purposes"
+}

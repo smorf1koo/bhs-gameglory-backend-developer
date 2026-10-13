@@ -1,0 +1,93 @@
+### Примеры запросов к Gameglory Catalog API
+### Формат: VS Code REST Client / JetBrains HTTP Client. Контракт: ../shared-data/mock-api/openapi.yaml
+### Сначала запросы обязательной части, дополнительные — в конце файла.
+
+@host = http://localhost:8000
+
+### Поиск: по умолчанию сортировка -reviews_total, page=1, page_size=20
+GET {{host}}/games
+
+### Поиск по названию (подстрока, без учёта регистра)
+GET {{host}}/games?q=lantern
+
+### Теги через запятую — логическое И
+GET {{host}}/games?tags=roguelike,deckbuilding&sort=-price_usd&page_size=5
+
+### Комбинация обязательных фильтров
+GET {{host}}/games?tags=survival&price_min=5&price_max=19.99
+
+### Только бесплатные
+GET {{host}}/games?price_max=0
+
+### Сортировка по доле положительных, null — в конце
+GET {{host}}/games?sort=-reviews_positive_ratio&page=2&page_size=50
+
+### Страница за пределами диапазона: пустой items, корректный total
+GET {{host}}/games?page=10000&page_size=50
+
+### Неизвестный тег — не ошибка, пустой результат
+GET {{host}}/games?tags=no-such-tag
+
+### Карточка игры
+GET {{host}}/games/100950
+
+### Статистика ниши
+GET {{host}}/niches/roguelike/stats
+
+### ---------- Ошибки ----------
+
+### 404: игры нет
+GET {{host}}/games/1
+
+### 404: неизвестный тег ниши
+GET {{host}}/niches/definitely-not-a-tag/stats
+
+### 422: page_size вне диапазона
+GET {{host}}/games?page_size=101
+
+### 422: price_min > price_max
+GET {{host}}/games?price_min=20&price_max=10
+
+### 422: пустой q или q из одних пробелов
+GET {{host}}/games?q=%20%20
+
+### 422: page выше допустимого максимума (не 500)
+GET {{host}}/games?page=99999999999999999999
+
+### 422: бесконечная цена
+GET {{host}}/games?price_max=inf
+
+### 422: недопустимое поле сортировки (и попытка инъекции)
+GET {{host}}/games?sort=id;DROP TABLE games
+
+### 422: id вне диапазона 1..2147483647
+GET {{host}}/games/0
+
+### 422 (или 404): нечисловой id
+GET {{host}}/games/not-a-number
+
+### ---------- Дополнительная часть ----------
+
+### Проверка живости (в starter уже есть)
+GET {{host}}/health
+
+### Словарь тегов (games_count desc, slug asc)
+GET {{host}}/tags
+
+### Похожие игры (Жаккар по тегам)
+GET {{host}}/games/100950/similar?limit=5
+
+### Фильтр по году релиза
+GET {{host}}/games?tags=survival&year_from=2018&year_to=2024
+
+### 422: year_from > year_to
+GET {{host}}/games?year_from=2024&year_to=2020
+
+### Фильтры жанра и платформы
+GET {{host}}/games?genre=Strategy&platform=linux&price_max=0
+
+### 422: неизвестная платформа
+GET {{host}}/games?platform=ps5
+
+### Swagger / OpenAPI сервиса
+GET {{host}}/openapi.json
